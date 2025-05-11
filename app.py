@@ -1,7 +1,8 @@
 from flask import Flask, request
 import telegram
-import openai
 import os
+from openai import OpenAI
+from openai import OpenAIError, APITimeoutError
 
 # Загружаем токены
 TELEGRAM_TOKEN = os.environ.get("BOT_TOKEN")
@@ -11,9 +12,9 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 if not TELEGRAM_TOKEN or not OPENAI_API_KEY:
     raise ValueError("❌ BOT_TOKEN и/или OPENAI_API_KEY не заданы в переменных окружения!")
 
-# Инициализация
+# Инициализация клиентов
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
-openai.api_key = OPENAI_API_KEY
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 app = Flask(__name__)
 
 # Функция ИИ-гадания на 3 карты
@@ -36,14 +37,14 @@ def generate_three_card_reading(question):
     Напиши красиво, немного мистически, но понятно. Используй эмодзи.
     """
 
-    response = openai.ChatCompletion.create(
+    response = openai_client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.9,
         max_tokens=700,
-        request_timeout=20  # ⏱️ Таймаут на 20 сек
+        timeout=20  # тайм-аут в секундах
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 # Обработка запроса от Telegram
 @app.route('/webhook', methods=['POST'])
@@ -80,9 +81,9 @@ def webhook():
                     bot.send_message(chat_id, "🔮 Формирую расклад, подожди немного...")
                     reading = generate_three_card_reading(question)
                     bot.send_message(chat_id, reading)
-            except openai.error.Timeout:
+            except APITimeoutError:
                 bot.send_message(chat_id, "⌛ Магия медлит... Попробуй ещё раз через минуту.")
-            except Exception as e:
+            except OpenAIError as e:
                 bot.send_message(chat_id, "⚠️ Произошёл сбой в потоке магии. Попробуй позже.")
                 print("GPT ERROR:", e)
 
