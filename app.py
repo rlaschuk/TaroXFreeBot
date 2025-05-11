@@ -24,17 +24,26 @@ def webhook():
 
     if update.message:
         chat_id = update.message.chat.id
-        text = update.message.text.lower()
+        text = update.message.text.strip()
 
-        if text == "/start":
-            bot.send_message(chat_id, "🔮 Добро пожаловать в TaroXFreeBot!\nЗадай вопрос или используй команду /ask для расклада.")
+        if text.lower() == "/start":
+            bot.send_message(chat_id, "🔮 Добро пожаловать в TaroXFreeBot!\nЗадай вопрос или используй команду /ask <твой вопрос> для расклада.")
 
-        elif text == "/about":
-            bot.send_message(chat_id, "🤖 Этот бот гадает на Таро с помощью искусственного интеллекта.\nПросто задай вопрос или используй /ask.")
+        elif text.lower() == "/about":
+            bot.send_message(chat_id, "🤖 Этот бот гадает на Таро с помощью искусственного интеллекта.\nПросто задай вопрос или используй /ask <вопрос>.")
 
-        elif text == "/ask":
+        elif text.lower().startswith("/ask"):
+            question = text[4:].strip()
+            if not question:
+                bot.send_message(chat_id, "❓ Пожалуйста, задай вопрос после команды. Пример:\n/ask Что ждёт меня в любви?")
+            else:
+                card = random.choice(tarot_cards)
+                bot.send_message(chat_id, f"🔮 Вопрос: {question}\n🃏 Я вытянул карту:\n{card}")
+
+        elif not text.startswith("/"):
+            # Любой свободный текст — трактуем как вопрос
             card = random.choice(tarot_cards)
-            bot.send_message(chat_id, f"🃏 Я вытянул карту для тебя:\n\n{card}")
+            bot.send_message(chat_id, f"🔮 Ты спросил: {text}\n🃏 Я вытянул карту:\n{card}")
 
         else:
             bot.send_message(chat_id, "❓ Я не понял команду. Используй /start, /ask или /about.")
