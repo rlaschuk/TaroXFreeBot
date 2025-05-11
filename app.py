@@ -69,19 +69,22 @@ def webhook():
             )
 
         elif text.lower().startswith("/ask"):
-            question = text[4:].strip()
-            if not question:
-                bot.send_message(chat_id, "❓ Пожалуйста, задай вопрос. Пример:\n/ask Что ждёт меня в любви?")
-            else:
-                bot.send_message(chat_id, "🔮 Формирую расклад, подожди немного...")
-                try:
+            try:
+                question = text[4:].strip()
+                if not question:
+                    bot.send_message(
+                        chat_id,
+                        "❓ Пожалуйста, задай вопрос. Пример:\n/ask Что ждёт меня в любви?"
+                    )
+                else:
+                    bot.send_message(chat_id, "🔮 Формирую расклад, подожди немного...")
                     reading = generate_three_card_reading(question)
                     bot.send_message(chat_id, reading)
-                except openai.error.Timeout:
-                    bot.send_message(chat_id, "⌛ Магия медлит... Попробуй ещё раз через минуту.")
-                except Exception as e:
-                    bot.send_message(chat_id, "⚠️ Произошёл сбой в потоке магии. Попробуй позже.")
-                    print("GPT ERROR:", e)
+            except openai.error.Timeout:
+                bot.send_message(chat_id, "⌛ Магия медлит... Попробуй ещё раз через минуту.")
+            except Exception as e:
+                bot.send_message(chat_id, "⚠️ Произошёл сбой в потоке магии. Попробуй позже.")
+                print("GPT ERROR:", e)
 
         else:
             bot.send_message(chat_id, "❓ Неизвестная команда. Попробуй /start, /ask или /about.")
