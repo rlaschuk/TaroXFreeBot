@@ -26,7 +26,7 @@ def generate_three_card_reading(question):
 
     Вытяни 3 карты и опиши расклад
 
-    Напиши красиво, немного мистически, но понятно. Используй эмодзи.
+    Напиши красиво. Используй эмодзи.
     """
 
     response = openai_client.chat.completions.create(
