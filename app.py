@@ -1,23 +1,45 @@
 from flask import Flask, request
 import telegram
+import openai
 import os
-import random
 
-TOKEN = os.environ.get("BOT_TOKEN")
-bot = telegram.Bot(token=TOKEN)
+# Загружаем токены
+TELEGRAM_TOKEN = os.environ.get("BOT_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
+# Инициализация
+bot = telegram.Bot(token=TELEGRAM_TOKEN)
+openai.api_key = OPENAI_API_KEY
 app = Flask(__name__)
 
-# Примитивная база карт Таро для примера
-tarot_cards = [
-    "🌟 Звезда — надежда, вдохновение, внутренний свет.",
-    "⚡ Башня — внезапные перемены, шок, разрушение старого.",
-    "☀️ Солнце — ясность, успех, радость.",
-    "🌙 Луна — иллюзии, интуиция, туманные дороги.",
-    "🪄 Маг — воля, инициатива, новые возможности.",
-    "🃏 Шут — начало пути, спонтанность, доверие."
-]
+# Функция ИИ-гадания
+def generate_three_card_reading(question):
+    prompt = f"""
+    Ты — мудрая ИИ-гадалка на картах Таро.
 
+    Вопрос пользователя: "{question}"
+
+    Вытяни 3 карты и опиши расклад:
+    1. Карта прошлого (или причина ситуации)
+    2. Карта настоящего (текущая ситуация)
+    3. Карта будущего или совет
+
+    Для каждой карты напиши:
+    - Название карты с эмодзи
+    - Краткое значение
+    - Как карта относится к вопросу пользователя
+
+    Напиши красиво, немного мистически, но понятно. Используй эмодзи.
+    """
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.9,
+        max_tokens=700
+    )
+    return response['choices'][0]['message']['content']
+
+# Webhook от Telegram
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = telegram.Update.de_json(request.get_json(force=True), bot)
@@ -27,35 +49,33 @@ def webhook():
         text = update.message.text.strip()
 
         if text.lower() == "/start":
-            bot.send_message(chat_id, "🔮 Добро пожаловать в TaroXFreeBot!\nЗадай вопрос или используй команду /ask <твой вопрос> для расклада.")
+            bot.send_message(chat_id, "🔮 Привет! Я гадаю на картах Таро.\nИспользуй команду /ask <твой вопрос> чтобы получить расклад.")
 
         elif text.lower() == "/about":
-            bot.send_message(chat_id, "🤖 Этот бот гадает на Таро с помощью ИИ.\nПросто задай вопрос или используй /ask <вопрос>.")
+            bot.send_message(chat_id, "🃏 Я использую искусственный интеллект, чтобы сделать расклад на 3 карты Таро. Просто задай вопрос с помощью /ask.")
 
         elif text.lower().startswith("/ask"):
             question = text[4:].strip()
             if not question:
-                bot.send_message(chat_id, "❓ Пожалуйста, задай вопрос после команды. Пример:\n/ask Что ждёт меня в любви?")
+                bot.send_message(chat_id, "❓ Пожалуйста, задай вопрос. Например:\n/ask Что ждёт меня в любви?")
             else:
-                card = random.choice(tarot_cards)
-                bot.send_message(chat_id, f"🔮 Вопрос: {question}\n🃏 Я вытянул карту:\n{card}")
-
-        elif not text.startswith("/"):
-            # Любой свободный текст — трактуем как вопрос
-            card = random.choice(tarot_cards)
-            bot.send_message(chat_id, f"🔮 Ты спросил: {text}\n\n\n🃏 Я вытянул карту:\n{card}")
+                bot.send_message(chat_id, "🔮 Формирую расклад, подожди немного...")
+                reading = generate_three_card_reading(question)
+                bot.send_message(chat_id, reading)
 
         else:
-            bot.send_message(chat_id, "❓ Я не понял команду. Используй /start, /ask или /about.")
+            bot.send_message(chat_id, "❓ Неизвестная команда. Попробуй /start, /ask или /about.")
 
     return "OK", 200
 
+# Проверка состояния
 @app.route('/')
 def home():
-    return "✅ TaroXFreeBot is alive."
+    return "✅ TaroXFreeBot is working."
 
+# Установка вебхука
 @app.route('/set_webhook')
 def set_webhook():
-    webhook_url = f"https://taroxfreebot.onrender.com/webhook"
+    webhook_url = "https://taroxfreebot.onrender.com/webhook"
     success = bot.set_webhook(url=webhook_url)
     return f"Webhook set: {success}"
